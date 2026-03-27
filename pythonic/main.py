@@ -19,11 +19,11 @@ root.minsize(300, 300)
 
 text = tk.Text(root)
 
-button = tk.Button(root, text="Save", command=saveas)
+button = tk.Button(root, text="Save", command=utils.saveas)
 
 font_selector = ttk.Combobox(root, text="Font", values=FONTS, state="readonly")
 font_selector.bind(
-    "<<ComboboxSelected>>", lambda x: utils.set_font(font_selector.get())
+    "<<ComboboxSelected>>", lambda x: utils.set_font(text, font_selector.get())
 )
 
 button.grid()
