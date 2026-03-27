@@ -7,10 +7,11 @@
 DWORD originalMode;
 HANDLE hStdin;
 
+// TODO: implement die in RawMode controllers
 void die(const char *s) {
     perror(s);
-    exit(0);
-}
+    exit(1);
+} 
 
 void disableRawMode()
 {
