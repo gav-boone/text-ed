@@ -10,6 +10,13 @@
 /*** defines ***/
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define TEXT_ED_VERSION "0.0.1"
+enum editorKey
+{
+    ARROW_LEFT = 1000,
+    ARROW_RIGHT,
+    ARROW_UP,
+    ARROW_DOWN,
+};
 
 /*** data ***/
 struct editorConfig
@@ -19,6 +26,7 @@ struct editorConfig
     HANDLE hStdout;
     int screenRows;
     int screenCols;
+    int cx, cy;
 };
 
 struct editorConfig E;
@@ -72,7 +80,8 @@ void enableRawMode()
         die("GetConsoleMode");
 
     DWORD raw = E.originalMode;
-    raw &= ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_VIRTUAL_TERMINAL_INPUT);
+    raw &= ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT);
+    raw |= ENABLE_VIRTUAL_TERMINAL_INPUT;
 
     if (!SetConsoleMode(E.hStdin, raw))
         die("SetConsoleMode");
@@ -87,11 +96,38 @@ void enableRawMode()
     atexit(disableRawMode);
 }
 
-char editorReadKey()
+int editorReadKey()
 {
     char c;
     DWORD bytesRead;
     ReadConsole(E.hStdin, &c, 1, &bytesRead, NULL);
+
+    if (c == '\x1b')
+    {
+        char seq[3];
+
+        if (!ReadConsole(E.hStdin, &seq[0], 1, &bytesRead, NULL))
+            return '\x1b';
+        if (!ReadConsole(E.hStdin, &seq[1], 1, &bytesRead, NULL))
+            return '\x1b';
+
+        if (seq[0] == '[')
+        {
+            switch (seq[1])
+            {
+            case 'A':
+                return ARROW_UP;
+            case 'B':
+                return ARROW_DOWN;
+            case 'C':
+                return ARROW_RIGHT;
+            case 'D':
+                return ARROW_LEFT;
+            }
+        }
+        return '\x1b';
+    }
+
     return c;
 }
 
@@ -106,9 +142,28 @@ int getWindowSize(int *rows, int *cols)
 }
 
 /*** input ***/
+void editorMoveCursor(int key)
+{
+    switch (key)
+    {
+    case ARROW_UP:
+        E.cy--;
+        break;
+    case ARROW_DOWN:
+        E.cy++;
+        break;
+    case ARROW_LEFT:
+        E.cx--;
+        break;
+    case ARROW_RIGHT:
+        E.cx++;
+        break;
+    }
+}
+
 void editorProcessKeypress()
 {
-    char c = editorReadKey();
+    int c = editorReadKey();
     DWORD written;
 
     switch (c)
@@ -117,6 +172,12 @@ void editorProcessKeypress()
         WriteConsole(E.hStdout, "\x1b[2J", 4, &written, NULL);
         WriteConsole(E.hStdout, "\x1b[H", 3, &written, NULL);
         exit(0);
+        break;
+    case ARROW_UP:
+    case ARROW_LEFT:
+    case ARROW_DOWN:
+    case ARROW_RIGHT:
+        editorMoveCursor(c);
         break;
     }
 }
@@ -140,7 +201,8 @@ void editorDrawRows(struct abuf *ab)
                 abAppend(ab, "~", 1);
                 padding--;
             }
-            while (padding--) abAppend(ab, " ", 1);
+            while (padding--)
+                abAppend(ab, " ", 1);
 
             abAppend(ab, welcome, welcomeLen);
         }
@@ -165,7 +227,10 @@ void editorRefreshScreen()
 
     editorDrawRows(&ab);
 
-    abAppend(&ab, "\x1b[H", 3);
+    char buf[32];
+    snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);
+    abAppend(&ab, buf, strlen(buf));
+
     abAppend(&ab, "\x1b[?25h", 6);
 
     WriteConsole(E.hStdout, ab.b, ab.len, &written, NULL);
@@ -175,6 +240,9 @@ void editorRefreshScreen()
 /*** init ***/
 void initEditor()
 {
+    E.cx = 0;
+    E.cy = 0;
+
     if (getWindowSize(&E.screenRows, &E.screenCols) == -1)
         die("getWindowSize");
 }
