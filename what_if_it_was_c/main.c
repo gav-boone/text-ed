@@ -113,6 +113,7 @@ int handlePageKeys(char seq[3])
             return PAGE_DOWN;
         }
     }
+    return '\x1b';
 }
 
 int handleArrowKeys(char seq[3])
@@ -128,6 +129,7 @@ int handleArrowKeys(char seq[3])
     case 'D':
         return ARROW_LEFT;
     }
+    return '\x1b';
 }
 
 int handleEscSeq()
