@@ -16,8 +16,12 @@ enum editorKey
     ARROW_RIGHT,
     ARROW_UP,
     ARROW_DOWN,
+    DEL,
+    HOME,
+    END,
     PAGE_UP,
     PAGE_DOWN,
+
 };
 
 /*** data ***/
@@ -98,40 +102,6 @@ void enableRawMode()
     atexit(disableRawMode);
 }
 
-int handlePageKeys(char seq[3])
-{
-    DWORD bytesRead;
-    if (!ReadConsole(E.hStdin, &seq[2], 1, &bytesRead, NULL))
-        return '\x1b';
-    if (seq[2] == '~')
-    {
-        switch (seq[1])
-        {
-        case '5':
-            return PAGE_UP;
-        case '6':
-            return PAGE_DOWN;
-        }
-    }
-    return '\x1b';
-}
-
-int handleArrowKeys(char seq[3])
-{
-    switch (seq[1])
-    {
-    case 'A':
-        return ARROW_UP;
-    case 'B':
-        return ARROW_DOWN;
-    case 'C':
-        return ARROW_RIGHT;
-    case 'D':
-        return ARROW_LEFT;
-    }
-    return '\x1b';
-}
-
 int handleEscSeq()
 {
     char seq[3];
@@ -145,9 +115,54 @@ int handleEscSeq()
     if (seq[0] == '[')
     {
         if (seq[1] >= '0' && seq[1] <= '9')
-            return handlePageKeys(seq);
+            if (!ReadConsole(E.hStdin, &seq[2], 1, &bytesRead, NULL))
+                return '\x1b';
+        if (seq[2] == '~')
+        {
+            switch (seq[1])
+            {
+            case '1':
+            case '7':
+                return HOME;
+            case '5':
+                return PAGE_UP;
+            case '6':
+                return PAGE_DOWN;
+            case '8':
+            case '4':
+                return END;
+            case '3':
+                return DEL;
+            }
+        }
+        return '\x1b';
 
-        return handleArrowKeys(seq);
+        switch (seq[1])
+        {
+        case 'A':
+            return ARROW_UP;
+        case 'B':
+            return ARROW_DOWN;
+        case 'C':
+            return ARROW_RIGHT;
+        case 'D':
+            return ARROW_LEFT;
+        case 'H':
+            return HOME;
+        case 'F':
+            return END;
+        }
+        return '\x1b';
+    }
+    else if (seq[0] == 'O')
+    {
+        switch (seq[1])
+        {
+        case 'H':
+            return HOME;
+        case 'F':
+            return END;
+        }
     }
     return '\x1b';
 }
@@ -213,15 +228,22 @@ void editorProcessKeypress()
         exit(0);
         break;
 
+    case HOME:
+        E.cx = 0;
+        break;
+    case END:
+        E.cx = E.screenCols - 1;
+        break;
+
     case PAGE_UP:
     case PAGE_DOWN:
-      {
+    {
         int times = E.screenRows;
         while (times--)
-          editorMoveCursor(c == PAGE_UP ? ARROW_UP : ARROW_DOWN);
-      }
-      break;
-      
+            editorMoveCursor(c == PAGE_UP ? ARROW_UP : ARROW_DOWN);
+    }
+    break;
+
     case ARROW_UP:
     case ARROW_LEFT:
     case ARROW_DOWN:
