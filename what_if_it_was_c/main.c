@@ -9,6 +9,7 @@
 
 /*** defines ***/
 #define CTRL_KEY(k) ((k) & 0x1f)
+#define TEXT_ED_VERSION "0.0.1"
 
 /*** data ***/
 struct editorConfig
@@ -126,8 +127,29 @@ void editorDrawRows(struct abuf *ab)
     int y;
     for (y = 0; y < E.screenRows; y++)
     {
-        abAppend(ab, "~", 1);
+        if (y == E.screenRows / 3)
+        {
+            char welcome[80];
+            int welcomeLen = snprintf(welcome, sizeof(welcome), "Welcome to Text Ed v%s", TEXT_ED_VERSION);
+            if (welcomeLen > E.screenCols)
+                welcomeLen = E.screenCols;
 
+            int padding = (E.screenCols - welcomeLen) / 2;
+            if (padding)
+            {
+                abAppend(ab, "~", 1);
+                padding--;
+            }
+            while (padding--) abAppend(ab, " ", 1);
+
+            abAppend(ab, welcome, welcomeLen);
+        }
+        else
+        {
+            abAppend(ab, "~", 1);
+        }
+
+        abAppend(ab, "\x1b[K", 3);
         if (y < E.screenRows - 1)
             abAppend(ab, "\r\n", 2);
     }
@@ -139,13 +161,12 @@ void editorRefreshScreen()
     DWORD written;
 
     abAppend(&ab, "\x1b[?25l", 6);
-    abAppend(&ab, "\x1b[2J", 4);
     abAppend(&ab, "\x1b[H", 3);
 
     editorDrawRows(&ab);
 
     abAppend(&ab, "\x1b[H", 3);
-    abAppend(&ab, "\x1b[?25l", 6);
+    abAppend(&ab, "\x1b[?25h", 6);
 
     WriteConsole(E.hStdout, ab.b, ab.len, &written, NULL);
     abFree(&ab);
