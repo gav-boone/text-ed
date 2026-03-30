@@ -63,11 +63,11 @@ char editorReadKey()
 void editorProcessKeypress()
 {
     char c = editorReadKey();
+    DWORD written;
 
     switch (c)
     {
     case CTRL_KEY('q'):
-        DWORD written;
         WriteConsole(hStdout, "\x1b[2J", 4, &written, NULL);
         WriteConsole(hStdout, "\x1b[H", 3, &written, NULL);
         exit(0);
@@ -76,10 +76,24 @@ void editorProcessKeypress()
 }
 
 /*** ouptut ***/
+void editorDrawRows()
+{
+    int y;
+    DWORD written;
+    for (y = 0; y < 24; y++)
+    {
+        WriteConsole(hStdout, "~\r\n", 12, &written, NULL);
+    }
+}
+
 void editorRefreshScreen()
 {
     DWORD written;
     WriteConsole(hStdout, "\x1b[2J", 4, &written, NULL);
+    WriteConsole(hStdout, "\x1b[H", 3, &written, NULL);
+
+    editorDrawRows();
+
     WriteConsole(hStdout, "\x1b[H", 3, &written, NULL);
 }
 
