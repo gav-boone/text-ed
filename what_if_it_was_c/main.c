@@ -1,3 +1,4 @@
+/*** includes ***/
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -5,9 +6,14 @@
 #include <windows.h>
 #include <errno.h>
 
+/*** defines ***/
+#define CTRL_KEY(k) ((k) & 0x1f)
+
+/*** data ***/
 DWORD originalMode;
 HANDLE hStdin;
 
+/*** terminal funcs ***/
 void die(const char *s)
 {
     fprintf(stderr, "%s: error %lu\n", s, GetLastError());
@@ -23,8 +29,6 @@ void disableRawMode()
 void enableRawMode()
 {
     hStdin = GetStdHandle(STD_INPUT_HANDLE);
-    DWORD fileType = GetFileType(hStdin);
-    printf("File type: %lu\n", fileType);
     if (!GetConsoleMode(hStdin, &originalMode))
         die("SetConsoleMode");
 
@@ -37,6 +41,7 @@ void enableRawMode()
     atexit(disableRawMode);
 }
 
+/*** main ***/
 int main()
 {
     enableRawMode();
@@ -53,7 +58,7 @@ int main()
         else
             printf("%d ('%c')\n", c, c);
 
-        if (c == 'q')
+        if (c == CTRL_KEY('q'))
             break;
     };
     return 0;
