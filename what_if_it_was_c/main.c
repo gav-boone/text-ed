@@ -4,48 +4,56 @@
 #include <ctype.h>
 #include <conio.h>
 #include <windows.h>
+#include <wincon.h>
 
 /*** defines ***/
 #define CTRL_KEY(k) ((k) & 0x1f)
 
 /*** data ***/
-DWORD originalMode;
-HANDLE hStdin;
-HANDLE hStdout;
+struct editorConfig
+{
+    DWORD originalMode;
+    HANDLE hStdin;
+    HANDLE hStdout;
+    int screenRows;
+    int screenCols;
+};
+
+struct editorConfig E;
 
 /*** terminal funcs ***/
 void die(const char *s)
 {
     DWORD written;
-    WriteConsole(hStdout, "\x1b[2J", 4, &written, NULL);
-    WriteConsole(hStdout, "\x1b[H", 3, &written, NULL);
+    WriteConsole(E.hStdout, "\x1b[2J", 4, &written, NULL);
+    WriteConsole(E.hStdout, "\x1b[H", 3, &written, NULL);
     fprintf(stderr, "%s: error %lu\n", s, GetLastError());
     exit(1);
 }
 
 void disableRawMode()
 {
-    if (!SetConsoleMode(hStdin, originalMode))
+    if (!SetConsoleMode(E.hStdin, E.originalMode))
         die("SetConsoleMode");
 }
 
 void enableRawMode()
 {
-    hStdin = GetStdHandle(STD_INPUT_HANDLE);
-    if (!GetConsoleMode(hStdin, &originalMode))
+    E.hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    if (!GetConsoleMode(E.hStdin, &E.originalMode))
         die("GetConsoleMode");
 
-    DWORD raw = originalMode;
+    DWORD raw = E.originalMode;
     raw &= ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_VIRTUAL_TERMINAL_INPUT);
 
-    if (!SetConsoleMode(hStdin, raw))
+    if (!SetConsoleMode(E.hStdin, raw))
         die("SetConsoleMode");
 
-    hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+    E.hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD outMode;
-    if (!GetConsoleMode(hStdout, &outMode))
+    if (!GetConsoleMode(E.hStdout, &outMode))
         die("GetConsoleMode");
-    if (!SetConsoleMode(hStdout, outMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+    if (!SetConsoleMode(E.hStdout, outMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
         die("SetConsoleMode");
 
     atexit(disableRawMode);
@@ -55,8 +63,18 @@ char editorReadKey()
 {
     char c;
     DWORD bytesRead;
-    ReadConsole(hStdin, &c, 1, &bytesRead, NULL);
+    ReadConsole(E.hStdin, &c, 1, &bytesRead, NULL);
     return c;
+}
+
+int getWindowSize(int *rows, int *cols)
+{
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if (!GetConsoleScreenBufferInfo(E.hStdout, &csbi))
+        return -1;
+    *cols = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    *rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+    return 0;
 }
 
 /*** input ***/
@@ -68,8 +86,8 @@ void editorProcessKeypress()
     switch (c)
     {
     case CTRL_KEY('q'):
-        WriteConsole(hStdout, "\x1b[2J", 4, &written, NULL);
-        WriteConsole(hStdout, "\x1b[H", 3, &written, NULL);
+        WriteConsole(E.hStdout, "\x1b[2J", 4, &written, NULL);
+        WriteConsole(E.hStdout, "\x1b[H", 3, &written, NULL);
         exit(0);
         break;
     }
@@ -80,27 +98,38 @@ void editorDrawRows()
 {
     int y;
     DWORD written;
-    for (y = 0; y < 24; y++)
+    for (y = 0; y < E.screenRows; y++)
     {
-        WriteConsole(hStdout, "~\r\n", 12, &written, NULL);
+        WriteConsole(E.hStdout, "~", 3, &written, NULL);
+
+        if (y < E.screenRows - 1)
+            WriteConsole(E.hStdout, "\r\n", 2, &written, NULL);
     }
 }
 
 void editorRefreshScreen()
 {
     DWORD written;
-    WriteConsole(hStdout, "\x1b[2J", 4, &written, NULL);
-    WriteConsole(hStdout, "\x1b[H", 3, &written, NULL);
+    WriteConsole(E.hStdout, "\x1b[2J", 4, &written, NULL);
+    WriteConsole(E.hStdout, "\x1b[H", 3, &written, NULL);
 
     editorDrawRows();
 
-    WriteConsole(hStdout, "\x1b[H", 3, &written, NULL);
+    WriteConsole(E.hStdout, "\x1b[H", 3, &written, NULL);
+}
+
+/*** init ***/
+void initEditor()
+{
+    if (getWindowSize(&E.screenRows, &E.screenCols) == -1)
+        die("getWindowSize");
 }
 
 /*** main ***/
 int main()
 {
     enableRawMode();
+    initEditor();
 
     while (1)
     {
