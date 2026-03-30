@@ -16,6 +16,8 @@ enum editorKey
     ARROW_RIGHT,
     ARROW_UP,
     ARROW_DOWN,
+    PAGE_UP,
+    PAGE_DOWN,
 };
 
 /*** data ***/
@@ -96,6 +98,58 @@ void enableRawMode()
     atexit(disableRawMode);
 }
 
+int handlePageKeys(char seq[3])
+{
+    DWORD bytesRead;
+    if (!ReadConsole(E.hStdin, &seq[2], 1, &bytesRead, NULL))
+        return '\x1b';
+    if (seq[2] == '~')
+    {
+        switch (seq[1])
+        {
+        case '5':
+            return PAGE_UP;
+        case '6':
+            return PAGE_DOWN;
+        }
+    }
+}
+
+int handleArrowKeys(char seq[3])
+{
+    switch (seq[1])
+    {
+    case 'A':
+        return ARROW_UP;
+    case 'B':
+        return ARROW_DOWN;
+    case 'C':
+        return ARROW_RIGHT;
+    case 'D':
+        return ARROW_LEFT;
+    }
+}
+
+int handleEscSeq()
+{
+    char seq[3];
+    DWORD bytesRead;
+
+    if (!ReadConsole(E.hStdin, &seq[0], 1, &bytesRead, NULL))
+        return '\x1b';
+    if (!ReadConsole(E.hStdin, &seq[1], 1, &bytesRead, NULL))
+        return '\x1b';
+
+    if (seq[0] == '[')
+    {
+        if (seq[1] >= '0' && seq[1] <= '9')
+            handlePageKeys(seq);
+
+        handleArrowKeys(seq);
+    }
+    return '\x1b';
+}
+
 int editorReadKey()
 {
     char c;
@@ -104,28 +158,7 @@ int editorReadKey()
 
     if (c == '\x1b')
     {
-        char seq[3];
-
-        if (!ReadConsole(E.hStdin, &seq[0], 1, &bytesRead, NULL))
-            return '\x1b';
-        if (!ReadConsole(E.hStdin, &seq[1], 1, &bytesRead, NULL))
-            return '\x1b';
-
-        if (seq[0] == '[')
-        {
-            switch (seq[1])
-            {
-            case 'A':
-                return ARROW_UP;
-            case 'B':
-                return ARROW_DOWN;
-            case 'C':
-                return ARROW_RIGHT;
-            case 'D':
-                return ARROW_LEFT;
-            }
-        }
-        return '\x1b';
+        return handleEscSeq();
     }
 
     return c;
@@ -147,16 +180,20 @@ void editorMoveCursor(int key)
     switch (key)
     {
     case ARROW_UP:
-        E.cy--;
+        if (E.cy != 0)
+            E.cy--;
         break;
     case ARROW_DOWN:
-        E.cy++;
+        if (E.cy != E.screenRows - 1)
+            E.cy++;
         break;
     case ARROW_LEFT:
-        E.cx--;
+        if (E.cx != 0)
+            E.cx--;
         break;
     case ARROW_RIGHT:
-        E.cx++;
+        if (E.cx != E.screenCols - 1)
+            E.cx++;
         break;
     }
 }
