@@ -1,3 +1,5 @@
+// TODO: A text viewer
+
 /*** includes ***/
 #include <stdio.h>
 #include <stdlib.h>
@@ -115,27 +117,29 @@ int handleEscSeq()
     if (seq[0] == '[')
     {
         if (seq[1] >= '0' && seq[1] <= '9')
+        {
             if (!ReadConsole(E.hStdin, &seq[2], 1, &bytesRead, NULL))
                 return '\x1b';
-        if (seq[2] == '~')
-        {
-            switch (seq[1])
+            if (seq[2] == '~')
             {
-            case '1':
-            case '7':
-                return HOME;
-            case '5':
-                return PAGE_UP;
-            case '6':
-                return PAGE_DOWN;
-            case '8':
-            case '4':
-                return END;
-            case '3':
-                return DEL;
+                switch (seq[1])
+                {
+                case '1':
+                case '7':
+                    return HOME;
+                case '5':
+                    return PAGE_UP;
+                case '6':
+                    return PAGE_DOWN;
+                case '8':
+                case '4':
+                    return END;
+                case '3':
+                    return DEL;
+                }
             }
+            return '\x1b';
         }
-        return '\x1b';
 
         switch (seq[1])
         {
