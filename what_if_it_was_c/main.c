@@ -5,6 +5,7 @@
 #include <conio.h>
 #include <windows.h>
 #include <wincon.h>
+#include <string.h>
 
 /*** defines ***/
 #define CTRL_KEY(k) ((k) & 0x1f)
@@ -21,11 +22,37 @@ struct editorConfig
 
 struct editorConfig E;
 
+/*** appedn buffer ***/
+struct abuf
+{
+    char *b;
+    int len;
+};
+
+#define ABUF_INIT {NULL, 0}
+
+void abAppend(struct abuf *ab, const char *s, int len)
+{
+    char *new = realloc(ab->b, ab->len + len);
+
+    if (new == NULL)
+        return;
+
+    memcpy(&new[ab->len], s, len);
+    ab->b = new;
+    ab->len += len;
+}
+
+void abFree(struct abuf *ab)
+{
+    free(ab->b);
+}
+
 /*** terminal funcs ***/
 void die(const char *s)
 {
     DWORD written;
-    WriteConsole(E.hStdout, "\x1b[2J", 4, &written, NULL);
+    abAppend(E.hStdout, "\x1b[2J", 4);
     WriteConsole(E.hStdout, "\x1b[H", 3, &written, NULL);
     fprintf(stderr, "%s: error %lu\n", s, GetLastError());
     exit(1);
@@ -94,28 +121,34 @@ void editorProcessKeypress()
 }
 
 /*** ouptut ***/
-void editorDrawRows()
+void editorDrawRows(struct abuf *ab)
 {
     int y;
-    DWORD written;
     for (y = 0; y < E.screenRows; y++)
     {
-        WriteConsole(E.hStdout, "~", 3, &written, NULL);
+        abAppend(ab, "~", 1);
 
         if (y < E.screenRows - 1)
-            WriteConsole(E.hStdout, "\r\n", 2, &written, NULL);
+            abAppend(ab, "\r\n", 2);
     }
 }
 
 void editorRefreshScreen()
 {
+    struct abuf ab = ABUF_INIT;
     DWORD written;
-    WriteConsole(E.hStdout, "\x1b[2J", 4, &written, NULL);
-    WriteConsole(E.hStdout, "\x1b[H", 3, &written, NULL);
 
-    editorDrawRows();
+    abAppend(&ab, "\x1b[?25l", 6);
+    abAppend(&ab, "\x1b[2J", 4);
+    abAppend(&ab, "\x1b[H", 3);
 
-    WriteConsole(E.hStdout, "\x1b[H", 3, &written, NULL);
+    editorDrawRows(&ab);
+
+    abAppend(&ab, "\x1b[H", 3);
+    abAppend(&ab, "\x1b[?25l", 6);
+
+    WriteConsole(E.hStdout, ab.b, ab.len, &written, NULL);
+    abFree(&ab);
 }
 
 /*** init ***/
