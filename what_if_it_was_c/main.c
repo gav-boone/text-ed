@@ -4,7 +4,6 @@
 #include <ctype.h>
 #include <conio.h>
 #include <windows.h>
-#include <errno.h>
 
 /*** defines ***/
 #define CTRL_KEY(k) ((k) & 0x1f)
@@ -41,25 +40,36 @@ void enableRawMode()
     atexit(disableRawMode);
 }
 
+char editorReadKey()
+{
+    char c;
+    DWORD bytesRead;
+    ReadConsole(hStdin, &c, 1, &bytesRead, NULL);
+    return c;
+}
+
+/*** input ***/
+void editorProcessKeypress()
+{
+    char c = editorReadKey();
+
+    switch (c)
+    {
+    case CTRL_KEY('q'):
+        exit(0);
+        break;
+    }
+}
+
 /*** main ***/
 int main()
 {
     enableRawMode();
 
-    DWORD bytesRead;
     while (1)
     {
-        char c = '\0';
-        if (!ReadConsole(hStdin, &c, 1, &bytesRead, NULL) && errno != EAGAIN)
-            die("ReadConsole");
+        editorProcessKeypress();
+    }
 
-        if (iscntrl(c))
-            printf("%d\n", c);
-        else
-            printf("%d ('%c')\n", c, c);
-
-        if (c == CTRL_KEY('q'))
-            break;
-    };
     return 0;
 }
