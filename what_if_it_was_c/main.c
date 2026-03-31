@@ -38,6 +38,7 @@ struct editorConfig {
     int screenCols;
     int cx, cy;
     int numRows;
+    int rowoff;
     erow *row;
 };
 
@@ -245,7 +246,7 @@ void editorMoveCursor(int key) {
             E.cy--;
         break;
     case ARROW_DOWN:
-        if (E.cy != E.screenRows - 1)
+        if (E.cy < E.numRows)
             E.cy++;
         break;
     case ARROW_LEFT:
@@ -299,7 +300,8 @@ void editorProcessKeypress() {
 void editorDrawRows(struct abuf* ab) {
     int y;
     for (y = 0; y < E.screenRows; y++) {
-        if (y >= E.numRows) {
+        int filerow = y + E.rowoff;
+        if (filerow >= E.numRows) {
             if (E.numRows == 0 && y == E.screenRows / 3) {
                 char welcome[80];
                 int welcomeLen = snprintf(welcome, sizeof(welcome), "Welcome to Text Ed v%s", TEXT_ED_VERSION);
@@ -321,10 +323,10 @@ void editorDrawRows(struct abuf* ab) {
             }
         }
         else {
-            int len = E.row[y].size;
+            int len = E.row[filerow].size;
             if (len > E.screenCols)
                 len = E.screenCols;
-            abAppend(ab, E.row[y].chars, len);
+            abAppend(ab, E.row[filerow].chars, len);
         }
 
         abAppend(ab, "\x1b[K", 3);
@@ -333,7 +335,18 @@ void editorDrawRows(struct abuf* ab) {
     }
 }
 
+void editorScroll() {
+    if (E.cy < E.rowoff) {
+        E.rowoff = E.cy;
+    }
+    if (E.cy >= E.rowoff + E.screenRows) {
+        E.rowoff = E.cy - E.screenRows + 1;
+    }
+}
+
 void editorRefreshScreen() {
+    editorScroll();
+
     struct abuf ab = ABUF_INIT;
     DWORD written;
 
@@ -344,7 +357,7 @@ void editorRefreshScreen() {
     editorDrawRows(&ab);
 
     char buf[32];
-    snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);
+    snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1, E.cx + 1);
     abAppend(&ab, buf, strlen(buf));
 
     abAppend(&ab, "\x1b[?25h", 6);
@@ -359,6 +372,7 @@ void initEditor() {
     E.cy = 0;
     E.numRows = 0;
     E.row = NULL;
+    E.rowoff = 0;
 
     if (getWindowSize(&E.screenRows, &E.screenCols) == -1)
         die("getWindowSize");
