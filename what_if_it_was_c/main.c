@@ -304,6 +304,12 @@ void editorMoveCursor(int key) {
         break;
     case ARROW_LEFT:
         if (E.cx != 0) {
+            if (row && E.cx >= TEXT_ED_TAB_STOP && E.cx % TEXT_ED_TAB_STOP == 0) {
+                int i;
+                for (i = 1; i <= TEXT_ED_TAB_STOP; i++)
+                    if (row->chars[E.cx - i] != ' ') break;
+                if (i > TEXT_ED_TAB_STOP) { E.cx -= TEXT_ED_TAB_STOP; break; }
+            }
             E.cx--;
         }
         else if (E.cy > 0) {
@@ -313,6 +319,12 @@ void editorMoveCursor(int key) {
         break;
     case ARROW_RIGHT:
         if (row && E.cx < row->size) {
+            if (E.cx + TEXT_ED_TAB_STOP <= row->size && E.cx % TEXT_ED_TAB_STOP == 0) {
+                int i;
+                for (i = 0; i < TEXT_ED_TAB_STOP; i++)
+                    if (row->chars[E.cx + i] != ' ') break;
+                if (i == TEXT_ED_TAB_STOP) { E.cx += TEXT_ED_TAB_STOP; break; }
+            }
             E.cx++;
         }
         else if (row && E.cx == row->size) {
@@ -461,6 +473,14 @@ void editorSetStatusMessage(const char* fmt, ...) {
     E.statusmsg_time = time(NULL);
 }
 
+void editorDrawMessageBar(struct abuf* ab) {
+    abAppend(ab, "\x1b[K", 3);
+    int msglen = strlen(E.statusmsg);
+    if (msglen > E.screenCols) msglen = E.screenCols;
+    if (msglen && time(NULL) - E.statusmsg_time < 5) 
+        abAppend(ab, E.statusmsg, msglen);
+}
+
 void editorRefreshScreen() {
     editorScroll();
 
@@ -471,8 +491,10 @@ void editorRefreshScreen() {
     abAppend(&ab, "\x1b[H", 3);
 
     getWindowSize(&E.screenRows, &E.screenCols);
+    E.screenRows -= 2;
     editorDrawRows(&ab);
     editorDrawStatusBar(&ab);
+    editorDrawMessageBar(&ab);
 
     char buf[32];
     snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1, (E.rx - E.coloff) + 1);
