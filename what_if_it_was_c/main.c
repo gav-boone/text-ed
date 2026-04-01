@@ -1,4 +1,4 @@
-/*** includes ***/
+/* includes */
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -8,7 +8,7 @@
 #include <string.h>
 #include <sys/types.h>
 
-/*** defines ***/
+/* defines */
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define TEXT_ED_VERSION "0.0.1"
 #define TEXT_ED_TAB_STOP 4
@@ -25,7 +25,7 @@ enum editorKey {
 
 };
 
-/*** data ***/
+/* data */
 typedef struct erow {
     int size;
     int rsize;
@@ -48,7 +48,7 @@ struct editorConfig {
 
 struct editorConfig E;
 
-/*** append buffer ***/
+/* append buffer */
 struct abuf {
     char* b;
     int len;
@@ -71,7 +71,7 @@ void abFree(struct abuf* ab) {
     free(ab->b);
 }
 
-/*** terminal funcs ***/
+/* terminal funcs */
 void die(const char* s) {
     DWORD written;
     abAppend(E.hStdout, "\x1b[2J", 4);
@@ -187,7 +187,7 @@ int getWindowSize(int* rows, int* cols) {
     return 0;
 }
 
-/*** row ops ***/
+/* row ops */
 void editorUpdateRow(erow* row) {
     int tabs = 0;
     int j;
@@ -227,7 +227,7 @@ void editorAppendRow(char* s, size_t len) {
     E.numRows++;
 }
 
-/*** file io ***/
+/* file io */
 ssize_t getline(char** lineptr, size_t* n, FILE* stream) {
     if (!lineptr || !n || !stream) return -1;
     size_t pos = 0;
@@ -269,7 +269,7 @@ void editorOpen(char* filename) {
     fclose(fp);
 }
 
-/*** input ***/
+/* input */
 void editorMoveCursor(int key) {
     erow* row = (E.cy >= E.numRows) ? NULL : &E.row[E.cy];
 
@@ -345,7 +345,7 @@ void editorProcessKeypress() {
     }
 }
 
-/*** ouptut ***/
+/* ouptut */
 void editorDrawRows(struct abuf* ab) {
     int y;
     for (y = 0; y < E.screenRows; y++) {
@@ -421,7 +421,7 @@ void editorRefreshScreen() {
     abFree(&ab);
 }
 
-/*** init ***/
+/* init */
 void initEditor() {
     E.cx = 0;
     E.cy = 0;
@@ -434,7 +434,7 @@ void initEditor() {
         die("getWindowSize");
 }
 
-/*** main ***/
+/* main */
 int main(int argc, char* argv[]) {
     enableRawMode();
     initEditor();
