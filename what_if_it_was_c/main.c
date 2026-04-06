@@ -15,6 +15,7 @@
 #define TEXT_ED_VERSION "0.0.1"
 #define TEXT_ED_TAB_STOP 4
 enum editorKey {
+    BACKSPACE = 127,
     ARROW_LEFT = 1000,
     ARROW_RIGHT,
     ARROW_UP,
@@ -233,8 +234,8 @@ void editorAppendRow(char* s, size_t len) {
     E.numRows++;
 }
 
-void editorRowInsertChar(erow *row, int at, int c) {
-    if (at < 0 || at > row->size) 
+void editorRowInsertChar(erow* row, int at, int c) {
+    if (at < 0 || at > row->size)
         at = row->size;
 
     row->chars = realloc(row->chars, row->size + 2);
@@ -257,9 +258,9 @@ int editorCxtoRx(erow* row, int cx) {
 
 /* editor ops */
 void editorInsertChar(int c) {
-    if (E.cy == E.numRows) 
+    if (E.cy == E.numRows)
         editorAppendRow("", 0);
-    
+
     editorRowInsertChar(&E.row[E.cy], E.cx, c);
     E.cx++;
 }
@@ -366,6 +367,10 @@ void editorProcessKeypress() {
     DWORD written;
 
     switch (c) {
+    case '\r':
+        /* TODO */
+        break;
+
     case CTRL_KEY('q'):
         WriteConsole(E.hStdout, "\x1b[2J", 4, &written, NULL);
         WriteConsole(E.hStdout, "\x1b[H", 3, &written, NULL);
@@ -378,6 +383,12 @@ void editorProcessKeypress() {
     case END:
         if (E.cy < E.numRows)
             E.cx = E.row[E.cy].size;
+        break;
+
+    case BACKSPACE:
+    case CTRL_KEY('h'):
+    case DEL:
+        /* TODO */
         break;
 
     case PAGE_UP:
@@ -402,6 +413,11 @@ void editorProcessKeypress() {
     case ARROW_DOWN:
     case ARROW_RIGHT:
         editorMoveCursor(c);
+        break;
+
+    case CTRL_KEY('l'):
+    case '\x1b':
+        // intentionally ignore these keys
         break;
 
     default:
@@ -501,7 +517,7 @@ void editorDrawMessageBar(struct abuf* ab) {
     abAppend(ab, "\x1b[K", 3);
     int msglen = strlen(E.statusmsg);
     if (msglen > E.screenCols) msglen = E.screenCols;
-    if (msglen && time(NULL) - E.statusmsg_time < 5) 
+    if (msglen && time(NULL) - E.statusmsg_time < 5)
         abAppend(ab, E.statusmsg, msglen);
 }
 
