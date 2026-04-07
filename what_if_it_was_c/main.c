@@ -1,3 +1,5 @@
+// TODO: next is step 108
+
 /* includes */
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,6 +10,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <stdarg.h>
+#include <fcntl.h>
 #include <time.h>
 
 /* defines */
@@ -290,6 +293,39 @@ ssize_t getline(char** lineptr, size_t* n, FILE* stream) {
     return pos;
 }
 
+char* editorRowsToString(int* buflen) {
+    int totlen = 0;
+    int j;
+    for (j = 0; j < E.numRows; j++)
+        totlen += E.row[j].size + 1;
+    *buflen = totlen;
+
+    char* buf = malloc(totlen);
+    char* p = buf;
+    for (j = 0; j < E.numRows; j++) {
+        memcpy(p, E.row[j].chars, E.row[j].size);
+        p += E.row[j].size;
+        *p = '\n';
+        p++;
+    }
+
+    return buf;
+}
+
+void editorSave() {
+    if (!E.filename) return;
+
+    int len;
+    char *buf = editorRowsToString(&len);
+
+    FILE *fp = fopen(E.filename, "w");
+    if (fp) {
+        fwrite(buf, 1, len, fp);
+        fclose(fp);
+    }
+    free(buf);
+}
+
 void editorOpen(char* filename) {
     free(E.filename);
     E.filename = strdup(filename);
@@ -375,6 +411,10 @@ void editorProcessKeypress() {
         WriteConsole(E.hStdout, "\x1b[2J", 4, &written, NULL);
         WriteConsole(E.hStdout, "\x1b[H", 3, &written, NULL);
         exit(0);
+        break;
+
+    case CTRL_KEY('s'):
+        editorSave();
         break;
 
     case HOME:
@@ -573,7 +613,7 @@ int main(int argc, char* argv[]) {
         editorOpen(argv[1]);
     }
 
-    editorSetStatusMessage("HELP: Ctrl+Q = quit");
+    editorSetStatusMessage("HELP: Ctrl+S = save | Ctrl+Q = quit");
 
     while (1) {
         editorRefreshScreen();
