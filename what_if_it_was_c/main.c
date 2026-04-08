@@ -15,6 +15,7 @@
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define TEXT_ED_VERSION "0.0.1"
 #define TEXT_ED_TAB_STOP 4
+#define TEXT_ED_QUIT_TIMES 1
 enum editorKey {
     BACKSPACE = 127,
     ARROW_LEFT = 1000,
@@ -411,6 +412,8 @@ void editorMoveCursor(int key) {
 }
 
 void editorProcessKeypress() {
+    static int quit_times = TEXT_ED_QUIT_TIMES;
+
     int c = editorReadKey();
     DWORD written;
 
@@ -420,6 +423,14 @@ void editorProcessKeypress() {
         break;
 
     case CTRL_KEY('q'):
+        if (E.dirty && quit_times > 0) {
+            editorSetStatusMessage(
+                "WARNING!!! File has unsaved changes. \nPress Ctrl+Q %d more times to quit.",
+                quit_times
+            );
+            quit_times--;
+            return;
+        }
         WriteConsole(E.hStdout, "\x1b[2J", 4, &written, NULL);
         WriteConsole(E.hStdout, "\x1b[H", 3, &written, NULL);
         exit(0);
@@ -476,6 +487,8 @@ void editorProcessKeypress() {
         editorInsertChar(c);
         break;
     }
+
+    quit_times = TEXT_ED_QUIT_TIMES;
 }
 
 /* ouptut */
@@ -540,18 +553,18 @@ void editorDrawStatusBar(struct abuf* ab) {
     abAppend(ab, "\x1b[7m", 4);
     char status[80], rstatus[80];
     int len = snprintf(
-        status, 
-        sizeof(status), 
-        "%.20s - %d lines %s", 
-        E.filename ? E.filename : "[No Name]", 
-        E.numRows, 
-        E.dirty ? "modified" : ""
+        status,
+        sizeof(status),
+        "%.20s - %d lines %s",
+        E.filename ? E.filename : "[No Name]",
+        E.numRows,
+        E.dirty ? "(unsaved changes)" : ""
     );
     int rlen = snprintf(
-        rstatus, 
-        sizeof(rstatus), 
-        "%d/%d", 
-        E.cy + 1, 
+        rstatus,
+        sizeof(rstatus),
+        "%d/%d",
+        E.cy + 1,
         E.numRows
     );
     if (len > E.screenCols) len = E.screenCols;
