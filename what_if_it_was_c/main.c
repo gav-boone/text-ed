@@ -1,5 +1,3 @@
-// TODO: next is step 108
-
 /* includes */
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,6 +55,9 @@ struct editorConfig {
 };
 
 struct editorConfig E;
+
+/* prototypes */
+void editorSetStatusMessage(const char* fmt, ...);
 
 /* append buffer */
 struct abuf {
@@ -316,13 +317,19 @@ void editorSave() {
     if (!E.filename) return;
 
     int len;
-    char *buf = editorRowsToString(&len);
+    int len_written;
+    char* buf = editorRowsToString(&len);
 
-    FILE *fp = fopen(E.filename, "w");
+    FILE* fp = fopen(E.filename, "w");
     if (fp) {
-        fwrite(buf, 1, len, fp);
+        len_written = fwrite(buf, 1, len, fp);
         fclose(fp);
+        editorSetStatusMessage("%d bytes written to disk", len_written);
     }
+    else {
+        editorSetStatusMessage("Can't save! I/O error: %s", strerror(errno));
+    }
+
     free(buf);
 }
 
