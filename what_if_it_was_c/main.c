@@ -315,7 +315,7 @@ void editorInsertNewLine() {
     }
     else {
         erow* row = &E.row[E.cy];
-        editorInsertRow(E.cy + 1, &row->chars[E.cx], row->size = E.cx);
+        editorInsertRow(E.cy + 1, &row->chars[E.cx], row->size - E.cx);
         row = &E.row[E.cy];
         row->size = E.cx;
         row->chars[row->size] = '\0';
