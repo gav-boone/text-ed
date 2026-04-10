@@ -62,6 +62,8 @@ struct editorConfig E;
 
 /* prototypes */
 void editorSetStatusMessage(const char* fmt, ...);
+void editorRefreshScreen();
+char* editorPrompt(char* prompt);
 
 /* append buffer */
 struct abuf {
@@ -387,7 +389,13 @@ char* editorRowsToString(int* buflen) {
 }
 
 void editorSave() {
-    if (!E.filename) return;
+    if (!E.filename) {
+        E.filename = editorPrompt("Save as: %s (ESC to cancel)");
+        if (!E.filename) {
+            editorSetStatusMessage("Save aborted");
+            return;
+        }
+    }
 
     int len;
     int len_written;
@@ -429,6 +437,43 @@ void editorOpen(char* filename) {
 }
 
 /* input */
+char* editorPrompt(char* prompt) {
+    size_t bufsize = 128;
+    char* buf = malloc(bufsize);
+
+    size_t buflen = 0;
+    buf[0] = '\0';
+
+    while (1) {
+        editorSetStatusMessage(prompt, buf);
+        editorRefreshScreen();
+
+        int c = editorReadKey();
+        if (c == DEL || c == CTRL_KEY('h') || c == BACKSPACE) {
+            if (buflen != 0) buf[--buflen] = '\0';
+        }
+        else if (c == '\x1b') {
+            editorSetStatusMessage("");
+            free(buf);
+            return NULL;
+        }
+        else if (c == '\r') {
+            if (buflen != 0) {
+                editorSetStatusMessage("");
+                return buf;
+            }
+        }
+        else if (!iscntrl(c) && c < 128) {
+            if (buflen == bufsize - 1) {
+                bufsize *= 2;
+                buf = realloc(buf, bufsize);
+            }
+            buf[buflen++] = c;
+            buf[buflen] = '\0';
+        }
+    }
+}
+
 void editorMoveCursor(int key) {
     erow* row = (E.cy >= E.numRows) ? NULL : &E.row[E.cy];
 
@@ -551,6 +596,13 @@ void editorProcessKeypress() {
     case CTRL_KEY('l'):
     case '\x1b':
         // intentionally ignore these keys
+        break;
+
+    case '\t':
+        int i;
+        for (i = 0; i < 4; i++) {
+            editorInsertChar(" ");
+        }
         break;
 
     default:
