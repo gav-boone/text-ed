@@ -598,12 +598,13 @@ void editorProcessKeypress() {
         // intentionally ignore these keys
         break;
 
-    case '\t':
-        int i;
-        for (i = 0; i < 4; i++) {
-            editorInsertChar(" ");
+    case '\t': {
+        int j;
+        for (j = 0; j < TEXT_ED_TAB_STOP; j++) {
+            editorInsertChar(32);
         }
         break;
+    }
 
     default:
         editorInsertChar(c);
