@@ -300,7 +300,7 @@ int editorCxtoRx(erow* row, int cx) {
     return rx;
 }
 
-editorRxtoCx(erow* row, int rx) {
+int editorRxtoCx(erow* row, int rx) {
     int cur_rx = 0;
     int cx;
     for (cx = 0; cx < row->size; cx++) {
