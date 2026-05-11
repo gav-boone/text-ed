@@ -73,6 +73,7 @@ struct editorConfig {
     int screenCols;
     int cx, cy;
     int rx;
+    int saved_cx;
     int numRows;
     int rowoff;
     int coloff;
@@ -797,10 +798,12 @@ void editorMoveCursor(int key) {
 
     switch (key) {
     case ARROW_UP:
+        if (E.saved_cx == -1) E.saved_cx = E.cx;
         if (E.cy != 0)
             E.cy--;
         break;
     case ARROW_DOWN:
+        if (E.saved_cx == -1) E.saved_cx = E.cx;
         if (E.cy < E.numRows)
             E.cy++;
         break;
@@ -838,8 +841,11 @@ void editorMoveCursor(int key) {
 
     row = (E.cy >= E.numRows) ? NULL : &E.row[E.cy];
     int rowlen = row ? row->size : 0;
-    if (E.cx > rowlen) {
-        E.cx = rowlen;
+    if (key == ARROW_UP || key == ARROW_DOWN) {
+        E.cx = (E.saved_cx < rowlen) ? E.saved_cx : rowlen;
+    } else {
+        if (E.cx > rowlen) E.cx = rowlen;
+        E.saved_cx = -1;
     }
 }
 
@@ -852,6 +858,7 @@ void editorProcessKeypress() {
     switch (c) {
     case '\r':
         editorInsertNewLine();
+        E.saved_cx = -1;
         break;
 
     case CTRL_KEY('q'):
@@ -889,6 +896,7 @@ void editorProcessKeypress() {
     case DEL:
         if (c == DEL) editorMoveCursor(ARROW_RIGHT);
         editorDelChar();
+        E.saved_cx = -1;
         break;
 
     case PAGE_UP:
@@ -930,6 +938,7 @@ void editorProcessKeypress() {
 
     default:
         editorInsertChar(c);
+        E.saved_cx = -1;
         break;
     }
 
@@ -1102,6 +1111,7 @@ void initEditor() {
     E.cx = 0;
     E.cy = 0;
     E.rx = 0;
+    E.saved_cx = -1;
     E.numRows = 0;
     E.row = NULL;
     E.rowoff = 0;
