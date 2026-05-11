@@ -549,11 +549,14 @@ void editorInsertChar(int c) {
 }
 
 void editorInsertNewLine() {
+    erow* row = &E.row[E.cy];
+    int indent = 0;
+    while (indent < row->size && row->chars[indent] == ' ') indent++;
+
     if (E.cx == 0) {
         editorInsertRow(E.cy, "", 0);
     }
     else {
-        erow* row = &E.row[E.cy];
         editorInsertRow(E.cy + 1, &row->chars[E.cx], row->size - E.cx);
         row = &E.row[E.cy];
         row->size = E.cx;
@@ -562,6 +565,12 @@ void editorInsertNewLine() {
     }
     E.cy++;
     E.cx = 0;
+
+    erow* newrow = &E.row[E.cy];
+    for (int i = 0; i < indent; i++) {
+        editorRowInsertChar(newrow, i, ' ');
+    }
+    E.cx = indent;
 }
 
 void editorDelChar() {
@@ -569,16 +578,28 @@ void editorDelChar() {
     if (E.cx == 0 && E.cy == 0) return;
 
     erow* row = &E.row[E.cy];
-    if (E.cx > 0) {
-        editorRowDelChar(row, E.cx - 1);
-        E.cx--;
-    }
-    else {
+    if (E.cx <= 0) {
         E.cx = E.row[E.cy - 1].size;
         editorRowAppendString(&E.row[E.cy - 1], row->chars, row->size);
         editorDelRow(E.cy);
         E.cy--;
+        return;
     }
+
+    if (E.cx >= TEXT_ED_TAB_STOP && E.cx % TEXT_ED_TAB_STOP == 0) {
+        int i;
+        for (i = 1; i <= TEXT_ED_TAB_STOP; i++)
+            if (row->chars[E.cx - i] != ' ') break;
+        if (i > TEXT_ED_TAB_STOP) {
+            for (i = 0; i < TEXT_ED_TAB_STOP; i++)
+                editorRowDelChar(row, E.cx - TEXT_ED_TAB_STOP);
+            E.cx -= TEXT_ED_TAB_STOP;
+            return;
+        }
+    }
+
+    editorRowDelChar(row, E.cx - 1);
+    E.cx--;
 }
 
 /* file io */
