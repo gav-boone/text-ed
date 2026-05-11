@@ -14,7 +14,7 @@
 /* defines */
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define TEXT_ED_VERSION "0.0.1"
-#define TEXT_ED_TAB_STOP 4
+#define TEXT_ED_TAB_STOP (E.syntax ? E.syntax->tab_stop : 4)
 #define TEXT_ED_QUIT_TIMES 1
 enum editorKey {
     BACKSPACE = 127,
@@ -53,6 +53,7 @@ struct editorSyntax {
     char* ml_comment_start;
     char* ml_comment_end;
     int flags;
+    int tab_stop;
 };
 
 typedef struct erow {
@@ -94,6 +95,24 @@ char* C_HL_keywords[] = {
     "int|", "long|", "double|", "float|", "char|", "unsigned|", "signed|", "void|", "const|",  NULL
 };
 
+char* PY_HL_extensions[] = { ".py", NULL };
+char* PY_HL_keywords[] = {
+    "import", "from", "as", "if", "elif", "else", "for", "while", "break", "continue", "return", "def", "class", "try", "except", "finally", "raise", "with", "yield", "pass", "lambda", "and", "or", "not", "in", "is", "global", "nonlocal", "assert", "del",
+    "int|", "float|", "str|", "bool|", "list|", "dict|", "tuple|", "set|", "None|", "True|", "False|",  NULL
+};
+
+char* JS_HL_extensions[] = { ".js", ".ts", ".jsx", ".tsx", NULL };
+char* JS_HL_keywords[] = {
+    "if", "else", "for", "while", "do", "switch", "case", "break", "continue", "return", "function", "class", "new", "delete", "typeof", "instanceof", "try", "catch", "finally", "throw", "import", "export", "default", "from", "const", "let", "var", "async", "await", "yield", "of", "in",
+    "undefined|", "null|", "true|", "false|", "NaN|", "Infinity|", "this|", "super|",  NULL
+};
+
+char* JAVA_HL_extensions[] = { ".java", NULL };
+char* JAVA_HL_keywords[] = {
+    "if", "else", "for", "while", "do", "switch", "case", "break", "continue", "return", "class", "interface", "extends", "implements", "new", "instanceof", "try", "catch", "finally", "throw", "throws", "import", "package", "public", "private", "protected", "static", "final", "abstract", "synchronized", "volatile", "transient", "native", "enum", "assert", "default", "super", "this",
+    "int|", "long|", "double|", "float|", "char|", "byte|", "short|", "boolean|", "void|", "String|", "null|", "true|", "false|",  NULL
+};
+
 struct editorSyntax HLDB[] = {
     {
         "c",
@@ -101,6 +120,31 @@ struct editorSyntax HLDB[] = {
         C_HL_keywords,
         "//", "/*", "*/",
         HL_HIGHLIGHT_NUMBERS | HL_HIGHLIGHT_STRINGS,
+        4,
+    },
+    {
+        "python",
+        PY_HL_extensions,
+        PY_HL_keywords,
+        "#", "\"\"\"", "\"\"\"",
+        HL_HIGHLIGHT_NUMBERS | HL_HIGHLIGHT_STRINGS,
+        4,
+    },
+    {
+        "js",
+        JS_HL_extensions,
+        JS_HL_keywords,
+        "//", "/*", "*/",
+        HL_HIGHLIGHT_NUMBERS | HL_HIGHLIGHT_STRINGS,
+        2,
+    },
+    {
+        "java",
+        JAVA_HL_extensions,
+        JAVA_HL_keywords,
+        "//", "/*", "*/",
+        HL_HIGHLIGHT_NUMBERS | HL_HIGHLIGHT_STRINGS,
+        4,
     },
 };
 
