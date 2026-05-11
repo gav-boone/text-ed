@@ -38,6 +38,7 @@ enum editorHighlight {
     HL_MATCH,
     HL_NUMBER,
     HL_MLCOMMENT,
+    HL_FUNC,
 };
 
 #define HL_HIGHLIGHT_NUMBERS (1<<0)
@@ -88,8 +89,8 @@ struct editorConfig E;
 /* filetypes */
 char* C_HL_extensions[] = { ".c", ".h", ".cpp", NULL };
 char* C_HL_keywords[] = {
-    "switch", "if", "while", "for", "break", "continue", "return", "else", "struct", "union", "typedef", "static", "enum", "class", "case",
-    "int|", "long|", "double|", "float|", "char|", "unsigned|", "signed|", "void|" "#include", "#define", NULL
+    "#include", "#define", "switch", "if", "while", "for", "break", "continue", "return", "else", "struct", "union", "typedef", "static", "enum", "class", "case",
+    "int|", "long|", "double|", "float|", "char|", "unsigned|", "signed|", "void|", "const|",  NULL
 };
 
 struct editorSyntax HLDB[] = {
@@ -103,7 +104,6 @@ struct editorSyntax HLDB[] = {
 };
 
 #define HLDB_ENTRIES (sizeof(HLDB) / sizeof(HLDB[0]))
-
 
 /* prototypes */
 void editorSetStatusMessage(const char* fmt, ...);
@@ -341,6 +341,14 @@ void editorUpdateSyntax(erow* row) {
             }
         }
 
+        if (!strncmp(&row->render[i], "(", 1)) {
+            int j = i - 1;
+            while (j >= 0 && !is_separator(row->render[j])) {
+                row->hl[j] = HL_FUNC;
+                j--;
+            }
+        }
+
         if (prev_sep) {
             int j;
             for (j = 0; keywords[j]; j++) {
@@ -378,6 +386,7 @@ int editorSyntaxToColor(int hl) {
     case HL_KEYWORD2: return 36; //cyan
     case HL_NUMBER: return 32; //green
     case HL_MATCH: return 100; //highlight gray
+    case HL_FUNC: return 93; // bright yellow
     default: return 37; //white 
     }
 }
